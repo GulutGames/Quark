@@ -22,6 +22,7 @@ import net.minecraft.world.item.enchantment.EnchantmentInstance;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 
+import org.violetmoon.quark.addons.oddities.block.be.MatrixEnchantingTableBlockEntity;
 import org.violetmoon.quark.addons.oddities.module.MatrixEnchantingModule;
 import org.violetmoon.quark.base.Quark;
 import org.violetmoon.quark.base.proxy.CommonProxy;
@@ -70,11 +71,14 @@ public class EnchantmentMatrix {
 		return influenced;
 	}
 
-	public boolean canGeneratePiece(Map<Enchantment, Integer> influences, int bookshelfPower, int enchantability) {
+	public boolean canGeneratePiece(MatrixEnchantingTableBlockEntity matrixEnchanter) {
+		int bookshelfPower = matrixEnchanter.bookshelfPower;
+		int enchantability = matrixEnchanter.enchantability;
+
 		if(enchantability == 0)
 			return false;
 
-		if(!generatePiece(influences, bookshelfPower, book, true))
+		if(!generatePiece(matrixEnchanter, book, true))
 			return false;
 
 		if(book) {
@@ -111,8 +115,8 @@ public class EnchantmentMatrix {
 		return 1 + (MatrixEnchantingModule.piecePriceScale == 0 ? 0 : count / MatrixEnchantingModule.piecePriceScale);
 	}
 
-	public boolean generatePiece(Map<Enchantment, Integer> influences, int bookshelfPower, boolean isBook, boolean simulate) {
-		EnchantmentDataWrapper data = generateRandomEnchantment(influences, bookshelfPower, isBook, simulate);
+	public boolean generatePiece(MatrixEnchantingTableBlockEntity matrixEnchanter, boolean isBook, boolean simulate) {
+		EnchantmentDataWrapper data = generateRandomEnchantment(matrixEnchanter, isBook, simulate);
 		if(data == null)
 			return false;
 
@@ -146,13 +150,16 @@ public class EnchantmentMatrix {
 		return true;
 	}
 
-	private EnchantmentDataWrapper generateRandomEnchantment(Map<Enchantment, Integer> influences, int bookshelfPower, boolean isBook, boolean simulate) {
-		int level = book ? (MatrixEnchantingModule.bookEnchantability + rng.nextInt(Math.max(1, bookshelfPower) * 2)) : 0;
+	private EnchantmentDataWrapper generateRandomEnchantment(MatrixEnchantingTableBlockEntity matrixEnchanter, boolean isBook, boolean simulate) {
+		Map<Enchantment, Integer> influences = matrixEnchanter.influences;
+
+		int level = book ? (MatrixEnchantingModule.bookEnchantability + rng.nextInt(Math.max(1, matrixEnchanter.bookshelfPower) * 2)) : 0;
 
 		List<Piece> marked = pieces.values().stream().filter(p -> p.marked).collect(Collectors.toList());
 
 		List<EnchantmentDataWrapper> validEnchants = new ArrayList<>();
-		HolderLookup.RegistryLookup<Enchantment> enchantmentRegistryLookup = Quark.proxy.hackilyGetCurrentClientLevelRegistryAccess().lookupOrThrow(Registries.ENCHANTMENT);
+		// Hey so dont put the Quark proxy here thats bad you have to do complicated maneuvers to get level from the BE for the registry access so you dont have https://github.com/VazkiiMods/Quark/issues/5522 happen again
+		HolderLookup.RegistryLookup<Enchantment> enchantmentRegistryLookup = matrixEnchanter.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
 		enchantmentRegistryLookup.listElements().forEach(enchantment -> {
 
 			String id = enchantment.getKey().location().toString();
