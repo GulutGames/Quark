@@ -2,6 +2,7 @@ package org.violetmoon.quark.datagen;
 
 import net.minecraft.advancements.critereon.ItemPredicate;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.loot.BlockLootSubProvider;
 import net.minecraft.world.flag.FeatureFlags;
@@ -17,6 +18,7 @@ import net.minecraft.world.level.storage.loot.entries.LootItem;
 import net.minecraft.world.level.storage.loot.entries.LootPoolEntryContainer;
 import net.minecraft.world.level.storage.loot.entries.LootPoolSingletonContainer;
 import net.minecraft.world.level.storage.loot.functions.ApplyBonusCount;
+import net.minecraft.world.level.storage.loot.functions.CopyComponentsFunction;
 import net.minecraft.world.level.storage.loot.functions.LimitCount;
 import net.minecraft.world.level.storage.loot.functions.SetItemCountFunction;
 import net.minecraft.world.level.storage.loot.predicates.BonusLevelTableCondition;
@@ -28,6 +30,7 @@ import net.minecraft.world.level.storage.loot.providers.number.UniformGenerator;
 import net.neoforged.neoforge.common.Tags;
 import org.violetmoon.quark.addons.oddities.module.*;
 import org.violetmoon.quark.base.Quark;
+import org.violetmoon.quark.base.components.QuarkDataComponents;
 import org.violetmoon.quark.content.automation.module.*;
 import org.violetmoon.quark.content.building.module.*;
 import org.violetmoon.quark.content.tools.module.BottledCloudModule;
@@ -209,7 +212,7 @@ public class QuarkBlockLootTableProvider extends BlockLootSubProvider {
         //Oddities
         dropSelf(PipesModule.pipe);
         dropSelf(PipesModule.encasedPipe);
-        add(TinyPotatoModule.tiny_potato, createNameableBlockEntityTable(TinyPotatoModule.tiny_potato));
+        add(TinyPotatoModule.tiny_potato, createTaterLootTable(TinyPotatoModule.tiny_potato));
         dropSelf(CrateModule.crate);
         dropSelf(MagnetsModule.magnet);
         dropSelf(BackpackModule.bonded_ravager_hide);
@@ -341,6 +344,14 @@ public class QuarkBlockLootTableProvider extends BlockLootSubProvider {
     protected LootTable.Builder createLeavesDrops(Block leafBlock, Block saplingBlock, float... saplingChances) {
         HolderLookup.RegistryLookup<Enchantment> registrylookup = this.registries.lookupOrThrow(Registries.ENCHANTMENT);
         return this.createSilkTouchOrShearsDispatchTable(leafBlock, ((LootPoolSingletonContainer.Builder<?>)this.applyExplosionCondition(leafBlock, LootItem.lootTableItem(saplingBlock))).when(BonusLevelTableCondition.bonusLevelFlatChance(registrylookup.getOrThrow(Enchantments.FORTUNE), saplingChances))).withPool(LootPool.lootPool().setRolls(ConstantValue.exactly(1.0F)).when(this.checkNotShearsOrSilk()).add(((LootPoolSingletonContainer.Builder)this.applyExplosionDecay(leafBlock, LootItem.lootTableItem(Items.STICK).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))).when(BonusLevelTableCondition.bonusLevelFlatChance(registrylookup.getOrThrow(Enchantments.FORTUNE), LEAVES_STICK_CHANCES))));
+    }
+
+    //copy of createNameableBlockEntityTable
+    protected LootTable.Builder createTaterLootTable(Block block) {
+        return LootTable.lootTable().withPool(this.applyExplosionCondition(block, LootPool.lootPool().setRolls(ConstantValue.exactly(1.0F)).add(LootItem.lootTableItem(block)
+                .apply(CopyComponentsFunction.copyComponents(CopyComponentsFunction.Source.BLOCK_ENTITY).include(DataComponents.CUSTOM_NAME))
+                .apply(CopyComponentsFunction.copyComponents(CopyComponentsFunction.Source.BLOCK_ENTITY).include(QuarkDataComponents.IS_ANGRY))
+        )));
     }
 
     //shears only, no silk touch
